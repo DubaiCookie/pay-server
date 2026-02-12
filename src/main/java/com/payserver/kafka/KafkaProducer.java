@@ -17,7 +17,7 @@ public class KafkaProducer {
     /**
      * 결제 완료 이벤트를 auth-server로 전송
      */
-    public void sendPaymentCompletedEvent(Long userId, Long paymentId, String orderId, Long amount) {
+    public void sendPaymentCompletedEvent(Long userId, Long paymentId, Long orderId, Long amount) {
         try {
             PaymentEventDto event = PaymentEventDto.builder()
                     .userId(userId)

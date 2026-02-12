@@ -61,7 +61,7 @@ public class PaymentController {
 
     @GetMapping("/order/{orderId}")
     @Operation(summary = "주문번호로 결제 조회", description = "주문번호로 결제 정보를 조회합니다.")
-    public ResponseEntity<Payment> getPaymentByOrderId(@PathVariable String orderId) {
+    public ResponseEntity<Payment> getPaymentByOrderId(@PathVariable Long orderId) {
         try {
             Payment payment = paymentService.getPaymentByOrderId(orderId);
             return ResponseEntity.ok(payment);

@@ -12,7 +12,7 @@ import lombok.NoArgsConstructor;
 public class PaymentEventDto {
     private Long userId;
     private Long paymentId;
-    private String orderId;
+    private Long orderId;
     private Long amount;
     private String eventType;
 }

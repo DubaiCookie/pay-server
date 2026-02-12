@@ -11,6 +11,6 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class PaymentConfirmDto {
     private String paymentKey;
-    private String orderId;
+    private Long orderId;
     private Long amount;
 }
