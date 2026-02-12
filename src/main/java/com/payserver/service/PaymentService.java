@@ -2,9 +2,12 @@ package com.payserver.service;
 
 import com.payserver.client.TossPaymentClient;
 import com.payserver.dto.*;
+import com.payserver.entity.Order;
+import com.payserver.entity.OrderStatus;
 import com.payserver.entity.Payment;
 import com.payserver.entity.PaymentStatus;
 import com.payserver.kafka.KafkaProducer;
+import com.payserver.repository.OrderRepository;
 import com.payserver.repository.PaymentRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -12,7 +15,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
-import java.util.UUID;
 
 @Slf4j
 @Service
@@ -20,27 +22,40 @@ import java.util.UUID;
 public class PaymentService {
 
     private final PaymentRepository paymentRepository;
+    private final OrderRepository orderRepository;
     private final TossPaymentClient tossPaymentClient;
     private final KafkaProducer kafkaProducer;
 
     /**
-     * 결제 준비 (orderId 생성 및 DB 저장)
+     * 결제 준비 (Order 생성 후 Payment 생성)
      */
     @Transactional
     public Payment createPayment(PaymentRequestDto request) {
-        String orderId = UUID.randomUUID().toString();
+        // 1. Order 먼저 생성
+        Order order = Order.builder()
+                .userId(request.getUserId())
+                .orderName(request.getOrderName())
+                .totalAmount(request.getAmount())
+                .ticketQuantity(request.getTicketQuantity() != null ? request.getTicketQuantity() : 1)
+                .orderStatus(OrderStatus.PENDING)
+                .build();
 
+        Order savedOrder = orderRepository.save(order);
+        log.info("Order created: orderId={}, userId={}, amount={}",
+                savedOrder.getOrderId(), request.getUserId(), request.getAmount());
+
+        // 2. Payment 생성 (Order의 ID 참조)
         Payment payment = Payment.builder()
                 .userId(request.getUserId())
-                .orderId(orderId)
+                .orderId(savedOrder.getOrderId())
                 .orderName(request.getOrderName())
                 .amount(request.getAmount())
                 .paymentStatus(PaymentStatus.PENDING)
                 .build();
 
         Payment savedPayment = paymentRepository.save(payment);
-        log.info("Payment created: orderId={}, userId={}, amount={}",
-                orderId, request.getUserId(), request.getAmount());
+        log.info("Payment created: paymentId={}, orderId={}, userId={}, amount={}",
+                savedPayment.getPaymentId(), savedOrder.getOrderId(), request.getUserId(), request.getAmount());
 
         return savedPayment;
     }
@@ -51,12 +66,19 @@ public class PaymentService {
     @Transactional
     public Payment confirmPayment(PaymentConfirmDto confirmDto) {
         try {
-            // Toss Payment API 호출
+            log.info("Confirming payment - orderId: {}, tossOrderId: {}, paymentKey: {}, amount: {}",
+                    confirmDto.getOrderId(), confirmDto.getTossOrderId(),
+                    confirmDto.getPaymentKey(), confirmDto.getAmount());
+
+            // Toss Payment API 호출 (Toss는 원래 보낸 orderId 형식을 받음)
             TossPaymentConfirmRequest tossRequest = TossPaymentConfirmRequest.builder()
                     .paymentKey(confirmDto.getPaymentKey())
-                    .orderId(confirmDto.getOrderId())
+                    .orderId(confirmDto.getTossOrderId())  // Toss에 보낸 원본 orderId 사용
                     .amount(confirmDto.getAmount())
                     .build();
+
+            log.info("Sending to Toss API - request: paymentKey={}, orderId={}, amount={}",
+                    tossRequest.getPaymentKey(), tossRequest.getOrderId(), tossRequest.getAmount());
 
             TossPaymentResponse tossResponse = tossPaymentClient.confirmPayment(tossRequest);
 
@@ -69,6 +91,13 @@ public class PaymentService {
             payment.setPaymentStatus(PaymentStatus.COMPLETED);
 
             Payment updatedPayment = paymentRepository.save(payment);
+
+            // Order 상태 업데이트
+            Order order = orderRepository.findById(payment.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + payment.getOrderId()));
+            order.setOrderStatus(OrderStatus.PAID);
+            orderRepository.save(order);
+
             log.info("Payment confirmed: paymentKey={}, orderId={}",
                     tossResponse.getPaymentKey(), confirmDto.getOrderId());
 
@@ -91,6 +120,12 @@ public class PaymentService {
             payment.setPaymentStatus(PaymentStatus.FAILED);
             paymentRepository.save(payment);
 
+            // Order 상태도 업데이트
+            Order order = orderRepository.findById(payment.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Order not found"));
+            order.setOrderStatus(OrderStatus.CANCELLED);
+            orderRepository.save(order);
+
             throw new RuntimeException("Payment confirmation failed", e);
         }
     }
@@ -99,7 +134,7 @@ public class PaymentService {
      * 결제 조회 (orderId로)
      */
     @Transactional(readOnly = true)
-    public Payment getPaymentByOrderId(String orderId) {
+    public Payment getPaymentByOrderId(Long orderId) {
         return paymentRepository.findByOrderId(orderId)
                 .orElseThrow(() -> new RuntimeException("Payment not found: " + orderId));
     }

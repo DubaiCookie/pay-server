@@ -1,6 +1,7 @@
 package com.payserver.client;
 
 import com.payserver.dto.*;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -11,6 +12,7 @@ import reactor.core.publisher.Mono;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
+@Slf4j
 @Component
 public class TossPaymentClient {
 
@@ -40,6 +42,14 @@ public class TossPaymentClient {
                 .header(HttpHeaders.AUTHORIZATION, "Basic " + encodedKey)
                 .bodyValue(request)
                 .retrieve()
+                .onStatus(
+                    status -> status.is4xxClientError() || status.is5xxServerError(),
+                    response -> response.bodyToMono(String.class)
+                        .flatMap(errorBody -> {
+                            log.error("Toss API error - Status: {}, Body: {}", response.statusCode(), errorBody);
+                            return Mono.error(new RuntimeException("Toss API Error: " + errorBody));
+                        })
+                )
                 .bodyToMono(TossPaymentResponse.class)
                 .block();
     }
