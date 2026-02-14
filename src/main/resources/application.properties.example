@@ -4,7 +4,7 @@ server.port=8082
 # Database Configuration (MariaDB)
 spring.datasource.url=jdbc:mariadb://localhost:3379/sql_db
 spring.datasource.username=root
-spring.datasource.password=SqlDba-1
+spring.datasource.password=YOUR_DB_PASSWORD_HERE
 spring.datasource.driver-class-name=org.mariadb.jdbc.Driver
 
 # JPA/Hibernate Configuration
@@ -24,9 +24,9 @@ spring.kafka.producer.value-serializer=org.apache.kafka.common.serialization.Str
 
 # Toss Payment API Configuration
 toss.payment.api.url=https://api.tosspayments.com/v1
-toss.payment.api.secret-key=test_sk_ORzdMaqN3wKQvgJO9bPP35AkYXQG
+toss.payment.api.secret-key=YOUR_TOSS_SECRET_KEY_HERE
 # Note: Client Key는 프론트엔드에서 사용 (결제창 호출 시)
-toss.payment.api.client-key=test_ck_YOUR_CLIENT_KEY_HERE
+toss.payment.api.client-key=YOUR_TOSS_CLIENT_KEY_HERE
 
 # Logging
 logging.level.com.payserver=DEBUG

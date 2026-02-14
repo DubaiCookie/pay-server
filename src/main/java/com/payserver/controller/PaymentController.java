@@ -16,9 +16,9 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/payments")
+@RequestMapping("/payments")
 @RequiredArgsConstructor
-@Tag(name = "Payment", description = "결제 관련 API")
+@Tag(name = "결제 API", description = "결제 관련 API")
 public class PaymentController {
 
     private final PaymentService paymentService;

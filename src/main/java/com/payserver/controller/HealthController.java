@@ -11,8 +11,8 @@ import java.util.HashMap;
 import java.util.Map;
 
 @RestController
-@RequestMapping("/api/health")
-@Tag(name = "Health", description = "서버 상태 확인 API")
+@RequestMapping("/health")
+@Tag(name = "헬스체크 API", description = "서버 상태 확인 API")
 public class HealthController {
 
     @GetMapping

@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>결제 실패</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+            text-align: center;
+        }
+        .fail-icon {
+            font-size: 80px;
+            margin-bottom: 20px;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+            font-size: 28px;
+        }
+        .subtitle {
+            color: #666;
+            margin-bottom: 30px;
+            font-size: 16px;
+        }
+        .error-box {
+            background: #fff3cd;
+            border: 2px solid #ffc107;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            text-align: left;
+        }
+        .error-title {
+            font-weight: bold;
+            color: #856404;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .error-message {
+            color: #856404;
+            line-height: 1.6;
+        }
+        .info-box {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .info-row {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px 0;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .info-row:last-child {
+            border-bottom: none;
+        }
+        .info-label {
+            color: #666;
+            font-weight: 600;
+        }
+        .info-value {
+            color: #333;
+            font-weight: 500;
+        }
+        .btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-secondary {
+            background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+        }
+        .tips {
+            background: #e7f3ff;
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            text-align: left;
+        }
+        .tips h3 {
+            color: #0066cc;
+            margin-bottom: 10px;
+            font-size: 16px;
+        }
+        .tips ul {
+            margin-left: 20px;
+            color: #333;
+        }
+        .tips li {
+            margin-bottom: 8px;
+            line-height: 1.5;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="fail-icon">❌</div>
+        <h1>결제에 실패했습니다</h1>
+        <p class="subtitle">결제 처리 중 문제가 발생했습니다.</p>
+
+        <div class="error-box">
+            <div class="error-title">오류 메시지</div>
+            <div class="error-message" id="error-message">알 수 없는 오류가 발생했습니다.</div>
+        </div>
+
+        <div class="info-box">
+            <div class="info-row">
+                <span class="info-label">오류 코드</span>
+                <span class="info-value" id="error-code">-</span>
+            </div>
+            <div class="info-row">
+                <span class="info-label">주문번호</span>
+                <span class="info-value" id="orderId">-</span>
+            </div>
+        </div>
+
+        <div class="tips">
+            <h3>💡 다음을 확인해보세요:</h3>
+            <ul>
+                <li>카드 번호, 유효기간, CVC 번호가 올바른지 확인하세요</li>
+                <li>카드 한도가 충분한지 확인하세요</li>
+                <li>해외 결제 차단이 되어있지 않은지 확인하세요</li>
+                <li>인터넷 연결이 안정적인지 확인하세요</li>
+                <li>테스트 환경에서는 테스트 카드 번호를 사용하세요</li>
+            </ul>
+        </div>
+
+        <a href="index.html" class="btn">다시 시도하기</a>
+    </div>
+
+    <script>
+        // URL 파라미터 파싱
+        const urlParams = new URLSearchParams(window.location.search);
+        const code = urlParams.get('code');
+        const message = urlParams.get('message');
+        const tossOrderId = urlParams.get('orderId');
+
+        // Toss orderId → 원래 orderId 변환 (형식이 맞는 경우에만)
+        const orderId = tossOrderId && tossOrderId.startsWith('ORDER_')
+            ? tossOrderId.replace('ORDER_', '').replace(/^0+/, '')
+            : tossOrderId;
+
+        console.log('결제 실패 정보:', { code, message, tossOrderId, orderId });
+
+        // 오류 정보 표시
+        if (message) {
+            document.getElementById('error-message').textContent = decodeURIComponent(message);
+        }
+
+        if (code) {
+            document.getElementById('error-code').textContent = code;
+        }
+
+        if (orderId) {
+            document.getElementById('orderId').textContent = orderId;
+        }
+    </script>
+</body>
+</html>

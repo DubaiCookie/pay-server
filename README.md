@@ -34,49 +34,57 @@ Toss Payment API를 활용한 결제 및 환불 서비스
 
 ### 결제 API
 
-- `POST /api/payments` - 결제 준비
-- `POST /api/payments/confirm` - 결제 승인
-- `GET /api/payments/{paymentId}` - 결제 조회
-- `GET /api/payments/order/{orderId}` - 주문번호로 결제 조회
-- `GET /api/payments/user/{userId}` - 사용자 결제 내역 조회
+- `POST /payments` - 결제 준비
+- `POST /payments/confirm` - 결제 승인
+- `GET /payments/{paymentId}` - 결제 조회
+- `GET /payments/order/{orderId}` - 주문번호로 결제 조회
+- `GET /payments/user/{userId}` - 사용자 결제 내역 조회
 
 ### 환불 API
 
-- `POST /api/refunds` - 환불 처리
-- `GET /api/refunds/{refundId}` - 환불 조회
-- `GET /api/refunds/payment/{paymentId}` - 결제별 환불 내역 조회
+- `POST /refunds` - 환불 처리
+- `GET /refunds/{refundId}` - 환불 조회
+- `GET /refunds/payment/{paymentId}` - 결제별 환불 내역 조회
 
 ### 기타
 
-- `GET /api/health` - 헬스 체크
+- `GET /health` - 헬스 체크
 
 ## Swagger UI
 
 서버 실행 후 다음 URL에서 API 문서 확인:
 ```
-http://localhost:8081/swagger-ui.html
+http://localhost:8082/swagger-ui/index.html
 ```
 
 ## 설정
 
-### application.properties
+### application.properties 설정
 
+**중요:** `application.properties` 파일은 민감한 정보를 포함하므로 Git에 커밋되지 않습니다.
+
+1. 예제 파일을 복사하여 실제 설정 파일 생성:
+```bash
+cp src/main/resources/application.properties.example src/main/resources/application.properties
+```
+
+2. `application.properties` 파일을 열어 실제 값으로 변경:
 ```properties
 # 서버 포트
-server.port=8081
+server.port=8082
 
 # 데이터베이스 설정
 spring.datasource.url=jdbc:mariadb://localhost:3379/sql_db
 spring.datasource.username=root
-spring.datasource.password=SqlDba-1
+spring.datasource.password=YOUR_DB_PASSWORD_HERE
 
 # Kafka 설정
 spring.kafka.bootstrap-servers=localhost:9092
 
 # Toss Payment API 설정
 toss.payment.api.url=https://api.tosspayments.com/v1
-toss.payment.api.secret-key=test_sk_YOUR_SECRET_KEY_HERE
-toss.payment.api.client-key=test_ck_YOUR_CLIENT_KEY_HERE
+toss.payment.api.secret-key=YOUR_TOSS_SECRET_KEY_HERE
+toss.payment.api.client-key=YOUR_TOSS_CLIENT_KEY_HERE
 ```
 
 ### Toss Payment 키 설명

@@ -15,9 +15,9 @@ import java.util.List;
 
 @Slf4j
 @RestController
-@RequestMapping("/api/refunds")
+@RequestMapping("/refunds")
 @RequiredArgsConstructor
-@Tag(name = "Refund", description = "환불 관련 API")
+@Tag(name = "환불 API", description = "환불 관련 API")
 public class RefundController {
 
     private final RefundService refundService;
