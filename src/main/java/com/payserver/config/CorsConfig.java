@@ -1,36 +1,39 @@
 package com.payserver.config;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 import org.springframework.web.filter.CorsFilter;
 
-import java.util.Arrays;
-
 @Configuration
 public class CorsConfig {
 
+    @Value("${cors.server-origin}")
+    private String serverOrigin;
+
+    @Value("${cors.server-origin-swagger}")
+    private String serverOriginSwagger;
+
     @Bean
     public CorsFilter corsFilter() {
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         CorsConfiguration config = new CorsConfiguration();
 
-        // 모든 origin 허용 (개발 환경용)
         config.setAllowCredentials(true);
-        config.addAllowedOriginPattern("*");
 
-        // 모든 헤더 허용
-        config.addAllowedHeader("*");
+        // 허용할 도메인 지정
+        config.addAllowedOrigin("http://localhost:8080"); // 로컬 auth-server
+        config.addAllowedOrigin("http://localhost:8082"); // 로컬 pay-server
+        config.addAllowedOrigin("http://localhost:3001"); // 로컬 프론트엔드
+        config.addAllowedOrigin(serverOrigin); // https://baeminjun.store
+        config.addAllowedOrigin(serverOriginSwagger);
 
-        // 모든 HTTP 메소드 허용
-        config.addAllowedMethod("*");
+        config.addAllowedHeader("*"); // 모든 헤더 허용
+        config.addAllowedMethod("*"); // 모든 HTTP 메서드 허용 (GET, POST, PUT, DELETE 등)
 
-        // Preflight 요청 캐시 시간
-        config.setMaxAge(3600L);
-
-        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
-
         return new CorsFilter(source);
     }
 }
