@@ -118,6 +118,15 @@ public class PaymentService {
             order.setOrderStatus(OrderStatus.PAID);
             orderRepository.save(order);
 
+            // 재고 차감
+            TicketManagement ticketManagement = ticketManagementRepository.findByIdWithLock(order.getTicketManagementId())
+                    .orElseThrow(() -> new RuntimeException("TicketManagement not found: " + order.getTicketManagementId()));
+            ticketManagement.reduceStock(order.getTicketQuantity());
+            ticketManagementRepository.save(ticketManagement);
+
+            log.info("Stock reduced: ticketManagementId={}, quantity={}, remainingStock={}",
+                    order.getTicketManagementId(), order.getTicketQuantity(), ticketManagement.getStock());
+
             log.info("Payment confirmed: paymentKey={}, orderId={}",
                     tossResponse.getPaymentKey(), confirmDto.getOrderId());
 

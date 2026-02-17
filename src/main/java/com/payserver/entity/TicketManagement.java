@@ -25,4 +25,11 @@ public class TicketManagement {
 
     @Column(name = "stock", nullable = false)
     private Integer stock;
+
+    public void reduceStock(int quantity) {
+        if (this.stock < quantity) {
+            throw new RuntimeException("재고 부족: 남은 재고=" + this.stock + ", 요청 수량=" + quantity);
+        }
+        this.stock -= quantity;
+    }
 }
