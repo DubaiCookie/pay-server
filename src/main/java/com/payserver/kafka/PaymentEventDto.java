@@ -14,5 +14,6 @@ public class PaymentEventDto {
     private Long paymentId;
     private Long orderId;
     private Long amount;
+    private Long ticketManagementId;
     private String eventType;
 }

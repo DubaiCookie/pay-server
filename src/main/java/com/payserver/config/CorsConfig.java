@@ -16,6 +16,9 @@ public class CorsConfig {
     @Value("${cors.server-origin-swagger}")
     private String serverOriginSwagger;
 
+    @Value("${cors.pay-server-origin}")
+    private String payServerOrigin;
+
     @Bean
     public CorsFilter corsFilter() {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
@@ -27,6 +30,7 @@ public class CorsConfig {
         config.addAllowedOrigin("http://localhost:8080"); // 로컬 auth-server
         config.addAllowedOrigin("http://localhost:8082"); // 로컬 pay-server
         config.addAllowedOrigin("http://localhost:3001"); // 로컬 프론트엔드
+        config.addAllowedOrigin(payServerOrigin); // 배포 pay-server (HTML 페이지)
         config.addAllowedOrigin(serverOrigin); // https://baeminjun.store
         config.addAllowedOrigin(serverOriginSwagger);
 

@@ -39,6 +39,9 @@ public class Order {
     @Column(name = "ticket_quantity", nullable = false)
     private Integer ticketQuantity;
 
+    @Column(name = "ticket_management_id", nullable = false)
+    private Long ticketManagementId;
+
     @Column(name = "expired_at")
     private LocalDateTime expiredAt;
 

@@ -2,18 +2,18 @@ package com.payserver.service;
 
 import com.payserver.client.TossPaymentClient;
 import com.payserver.dto.*;
-import com.payserver.entity.Order;
-import com.payserver.entity.OrderStatus;
-import com.payserver.entity.Payment;
-import com.payserver.entity.PaymentStatus;
+import com.payserver.entity.*;
 import com.payserver.kafka.KafkaProducer;
 import com.payserver.repository.OrderRepository;
 import com.payserver.repository.PaymentRepository;
+import com.payserver.repository.TicketManagementRepository;
+import com.payserver.repository.TicketRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.LocalDateTime;
 import java.util.List;
 
 @Slf4j
@@ -23,6 +23,8 @@ public class PaymentService {
 
     private final PaymentRepository paymentRepository;
     private final OrderRepository orderRepository;
+    private final TicketRepository ticketRepository;
+    private final TicketManagementRepository ticketManagementRepository;
     private final TossPaymentClient tossPaymentClient;
     private final KafkaProducer kafkaProducer;
 
@@ -31,31 +33,49 @@ public class PaymentService {
      */
     @Transactional
     public Payment createPayment(PaymentRequestDto request) {
-        // 1. Order 먼저 생성
+        int quantity = request.getTicketQuantity() != null ? request.getTicketQuantity() : 1;
+
+        // 1. ticketType으로 Ticket 조회 → price 확인
+        Ticket ticket = ticketRepository.findByTicketType(request.getTicketType())
+                .orElseThrow(() -> new RuntimeException("Ticket not found: " + request.getTicketType()));
+
+        // 2. ticketId + availableDate로 TicketManagement 조회
+        LocalDateTime startOfDay = request.getAvailableDate().atStartOfDay();
+        LocalDateTime endOfDay = request.getAvailableDate().atTime(23, 59, 59);
+        TicketManagement ticketManagement = ticketManagementRepository
+                .findByTicketIdAndAvailableAtBetween(ticket.getTicketId(), startOfDay, endOfDay)
+                .orElseThrow(() -> new RuntimeException("TicketManagement not found for date: " + request.getAvailableDate()));
+
+        // 3. amount 서버에서 계산
+        long amount = (long) ticket.getPrice() * quantity;
+        String orderName = request.getTicketType().name() + " 티켓 " + quantity + "매";
+
+        // 4. Order 생성
         Order order = Order.builder()
                 .userId(request.getUserId())
-                .orderName(request.getOrderName())
-                .totalAmount(request.getAmount())
-                .ticketQuantity(request.getTicketQuantity() != null ? request.getTicketQuantity() : 1)
+                .orderName(orderName)
+                .totalAmount(amount)
+                .ticketQuantity(quantity)
+                .ticketManagementId(ticketManagement.getTicketManagementId())
                 .orderStatus(OrderStatus.PENDING)
                 .build();
 
         Order savedOrder = orderRepository.save(order);
-        log.info("Order created: orderId={}, userId={}, amount={}",
-                savedOrder.getOrderId(), request.getUserId(), request.getAmount());
+        log.info("Order created: orderId={}, userId={}, amount={}, ticketManagementId={}",
+                savedOrder.getOrderId(), request.getUserId(), amount, ticketManagement.getTicketManagementId());
 
-        // 2. Payment 생성 (Order의 ID 참조)
+        // 5. Payment 생성
         Payment payment = Payment.builder()
                 .userId(request.getUserId())
                 .orderId(savedOrder.getOrderId())
-                .orderName(request.getOrderName())
-                .amount(request.getAmount())
+                .orderName(orderName)
+                .amount(amount)
                 .paymentStatus(PaymentStatus.PENDING)
                 .build();
 
         Payment savedPayment = paymentRepository.save(payment);
         log.info("Payment created: paymentId={}, orderId={}, userId={}, amount={}",
-                savedPayment.getPaymentId(), savedOrder.getOrderId(), request.getUserId(), request.getAmount());
+                savedPayment.getPaymentId(), savedOrder.getOrderId(), request.getUserId(), amount);
 
         return savedPayment;
     }
@@ -106,7 +126,8 @@ public class PaymentService {
                     payment.getUserId(),
                     payment.getPaymentId(),
                     payment.getOrderId(),
-                    payment.getAmount()
+                    payment.getAmount(),
+                    order.getTicketManagementId()
             );
 
             return updatedPayment;
