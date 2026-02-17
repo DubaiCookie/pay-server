@@ -156,7 +156,7 @@ public class PaymentService {
             order.setOrderStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
 
-            throw new RuntimeException("Payment confirmation failed", e);
+            throw new RuntimeException(e.getMessage() == null ? "Payment confirmation failed" : e.getMessage(), e);
         }
     }
 
