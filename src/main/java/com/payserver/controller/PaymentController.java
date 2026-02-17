@@ -43,12 +43,12 @@ public class PaymentController {
             return ResponseEntity.ok(payment);
         } catch (Exception e) {
             log.error("Payment confirmation failed", e);
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                .body(Payment.builder()
-                    .orderId(confirmDto.getOrderId())
-                    .orderName("CONFIRM_FAILED: " + (e.getMessage() == null ? "unknown" : e.getMessage()))
-                    .paymentStatus(null)
-                    .build());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(
+                java.util.Map.of(
+                    "code", "PAYMENT_CONFIRM_FAILED",
+                    "message", e.getMessage() == null ? "unknown" : e.getMessage()
+                )
+            );
         }
     }
 
