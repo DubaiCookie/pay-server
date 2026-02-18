@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Toss Payments 결제 테스트</title>
+    <script src="https://js.tosspayments.com/v1/payment"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 20px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+        }
+        h1 {
+            color: #333;
+            margin-bottom: 30px;
+            text-align: center;
+            font-size: 28px;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        label {
+            display: block;
+            margin-bottom: 8px;
+            color: #555;
+            font-weight: 600;
+        }
+        input, select {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 16px;
+            transition: border-color 0.3s;
+        }
+        input:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 18px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+            margin-top: 10px;
+        }
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn:active {
+            transform: translateY(0);
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .info {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            color: #666;
+            font-size: 14px;
+        }
+        .info strong {
+            color: #333;
+        }
+        #loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            padding: 15px;
+            border-radius: 8px;
+            margin-top: 15px;
+            color: #c33;
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>💳 결제 테스트</h1>
+
+        <div class="info">
+            <strong>테스트 안내:</strong><br>
+            • Toss Payments 테스트 환경에서 실행됩니다<br>
+            • 실제 결제가 발생하지 않습니다<br>
+            • 테스트 카드 번호를 사용하세요
+        </div>
+
+        <form id="payment-form">
+            <div class="form-group">
+                <label for="userId">사용자 ID</label>
+                <input type="number" id="userId" value="1" required>
+            </div>
+
+            <div class="form-group">
+                <label for="orderName">상품명</label>
+                <input type="text" id="orderName" value="테스트 상품" required>
+            </div>
+
+            <div class="form-group">
+                <label for="amount">결제 금액 (원)</label>
+                <input type="number" id="amount" value="10000" min="1000" step="1000" required>
+            </div>
+
+            <button type="submit" class="btn" id="submit-btn">결제하기</button>
+        </form>
+
+        <div id="loading">
+            <div class="spinner"></div>
+            <p style="margin-top: 10px; color: #666;">결제 준비 중...</p>
+        </div>
+
+        <div class="error" id="error-message"></div>
+    </div>
+
+    <script>
+        const API_BASE_URL = window.location.origin; // 동적으로 현재 서버 주소 사용
+        const CLIENT_KEY = 'test_ck_DnyRpQWGrN6qjbwGmgK2rKwv1M9E';
+
+        // Toss Payments 초기화
+        const tossPayments = TossPayments(CLIENT_KEY);
+
+        document.getElementById('payment-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+
+            const userId = document.getElementById('userId').value;
+            const orderName = document.getElementById('orderName').value;
+            const amount = parseInt(document.getElementById('amount').value);
+
+            // 버튼 비활성화 및 로딩 표시
+            const submitBtn = document.getElementById('submit-btn');
+            submitBtn.disabled = true;
+            document.getElementById('payment-form').style.display = 'none';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('error-message').style.display = 'none';
+
+            try {
+                // 1. 결제 준비 API 호출 (orderId 생성)
+                console.log('결제 준비 요청:', { userId, orderName, amount });
+
+                const response = await fetch(`${API_BASE_URL}/payments`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        userId: parseInt(userId),
+                        orderName: orderName,
+                        amount: amount
+                    })
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    throw new Error(`결제 준비 실패: ${response.status} - ${errorText}`);
+                }
+
+                const payment = await response.json();
+                const orderId = payment.orderId;
+
+                // Toss 요구사항에 맞는 orderId 생성 (6자 이상, 영문+숫자+특수문자)
+                const tossOrderId = `ORDER_${String(orderId).padStart(10, '0')}`;
+
+                console.log('결제 준비 완료:', payment);
+                console.log('Toss orderId:', tossOrderId);
+
+                // 2. Toss Payments 결제창 호출
+                await tossPayments.requestPayment('카드', {
+                    amount: amount,
+                    orderId: tossOrderId,
+                    orderName: orderName,
+                    successUrl: window.location.origin + '/success.html',
+                    failUrl: window.location.origin + '/fail.html',
+                    customerEmail: 'customer@example.com',
+                    customerName: '테스트 사용자',
+                });
+
+            } catch (error) {
+                console.error('결제 오류:', error);
+
+                // 에러 메시지 표시
+                const errorDiv = document.getElementById('error-message');
+                errorDiv.textContent = error.message || '결제 처리 중 오류가 발생했습니다.';
+                errorDiv.style.display = 'block';
+
+                // 폼 다시 표시
+                document.getElementById('payment-form').style.display = 'block';
+                document.getElementById('loading').style.display = 'none';
+                submitBtn.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>
