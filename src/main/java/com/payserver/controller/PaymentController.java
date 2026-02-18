@@ -37,7 +37,7 @@ public class PaymentController {
 
     @PostMapping("/confirm")
     @Operation(summary = "결제 승인", description = "Toss Payment API를 통해 결제를 승인합니다.")
-    public ResponseEntity<Payment> confirmPayment(@RequestBody PaymentConfirmDto confirmDto) {
+    public ResponseEntity<?> confirmPayment(@RequestBody PaymentConfirmDto confirmDto) {
         try {
             Payment payment = paymentService.confirmPayment(confirmDto);
             return ResponseEntity.ok(payment);
