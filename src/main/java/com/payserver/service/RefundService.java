@@ -33,11 +33,17 @@ public class RefundService {
      */
     @Transactional
     public Refund processRefund(RefundRequestDto request) {
-        try {
-            // 결제 정보 조회
-            Payment payment = paymentRepository.findById(request.getPaymentId())
-                    .orElseThrow(() -> new RuntimeException("Payment not found: " + request.getPaymentId()));
+        // 멱등성 체크: 비관적 락으로 결제 조회
+        Payment payment = paymentRepository.findByIdWithLock(request.getPaymentId())
+                .orElseThrow(() -> new RuntimeException("Payment not found: " + request.getPaymentId()));
 
+        // 이미 취소된 결제 → 기존 완료된 환불 반환
+        if (payment.getPaymentStatus() == PaymentStatus.CANCELLED) {
+            return refundRepository.findByPaymentIdAndRefundStatus(request.getPaymentId(), RefundStatus.COMPLETED)
+                    .orElseThrow(() -> new RuntimeException("Refund record not found for cancelled payment: " + request.getPaymentId()));
+        }
+
+        try {
             if (payment.getPaymentStatus() != PaymentStatus.COMPLETED) {
                 throw new RuntimeException("Payment is not completed: " + payment.getPaymentId());
             }

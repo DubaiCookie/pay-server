@@ -85,6 +85,18 @@ public class PaymentService {
      */
     @Transactional
     public Payment confirmPayment(PaymentConfirmDto confirmDto) {
+        // 멱등성 체크: 비관적 락으로 조회 후 이미 처리된 결제는 즉시 반환
+        Payment existingPayment = paymentRepository.findByOrderIdWithLock(confirmDto.getOrderId())
+                .orElseThrow(() -> new RuntimeException("Payment not found: " + confirmDto.getOrderId()));
+
+        if (existingPayment.getPaymentStatus() == PaymentStatus.COMPLETED) {
+            log.info("Payment already completed (idempotent): orderId={}", confirmDto.getOrderId());
+            return existingPayment;
+        }
+        if (existingPayment.getPaymentStatus() == PaymentStatus.FAILED) {
+            throw new RuntimeException("Payment already failed: " + confirmDto.getOrderId());
+        }
+
         try {
             log.info("Confirming payment - orderId: {}, tossOrderId: {}, paymentKey: {}, amount: {}",
                     confirmDto.getOrderId(), confirmDto.getTossOrderId(),
@@ -102,19 +114,16 @@ public class PaymentService {
 
             TossPaymentResponse tossResponse = tossPaymentClient.confirmPayment(tossRequest);
 
-            // DB 업데이트
-            Payment payment = paymentRepository.findByOrderId(confirmDto.getOrderId())
-                    .orElseThrow(() -> new RuntimeException("Payment not found: " + confirmDto.getOrderId()));
+            // DB 업데이트 (이미 락으로 조회한 existingPayment 재사용)
+            existingPayment.setPaymentKey(tossResponse.getPaymentKey());
+            existingPayment.setPaymentMethod(tossResponse.getMethod());
+            existingPayment.setPaymentStatus(PaymentStatus.COMPLETED);
 
-            payment.setPaymentKey(tossResponse.getPaymentKey());
-            payment.setPaymentMethod(tossResponse.getMethod());
-            payment.setPaymentStatus(PaymentStatus.COMPLETED);
-
-            Payment updatedPayment = paymentRepository.save(payment);
+            Payment updatedPayment = paymentRepository.save(existingPayment);
 
             // Order 상태 업데이트
-            Order order = orderRepository.findById(payment.getOrderId())
-                    .orElseThrow(() -> new RuntimeException("Order not found: " + payment.getOrderId()));
+            Order order = orderRepository.findById(existingPayment.getOrderId())
+                    .orElseThrow(() -> new RuntimeException("Order not found: " + existingPayment.getOrderId()));
             order.setOrderStatus(OrderStatus.PAID);
             orderRepository.save(order);
 
@@ -132,10 +141,10 @@ public class PaymentService {
 
             // Kafka 이벤트 전송
             kafkaProducer.sendPaymentCompletedEvent(
-                    payment.getUserId(),
-                    payment.getPaymentId(),
-                    payment.getOrderId(),
-                    payment.getAmount(),
+                    existingPayment.getUserId(),
+                    existingPayment.getPaymentId(),
+                    existingPayment.getOrderId(),
+                    existingPayment.getAmount(),
                     order.getTicketManagementId()
             );
 
@@ -144,14 +153,12 @@ public class PaymentService {
         } catch (Exception e) {
             log.error("Payment confirmation failed: orderId={}", confirmDto.getOrderId(), e);
 
-            // 결제 실패 처리
-            Payment payment = paymentRepository.findByOrderId(confirmDto.getOrderId())
-                    .orElseThrow(() -> new RuntimeException("Payment not found"));
-            payment.setPaymentStatus(PaymentStatus.FAILED);
-            paymentRepository.save(payment);
+            // 결제 실패 처리 (이미 락으로 조회한 existingPayment 재사용)
+            existingPayment.setPaymentStatus(PaymentStatus.FAILED);
+            paymentRepository.save(existingPayment);
 
             // Order 상태도 업데이트
-            Order order = orderRepository.findById(payment.getOrderId())
+            Order order = orderRepository.findById(existingPayment.getOrderId())
                     .orElseThrow(() -> new RuntimeException("Order not found"));
             order.setOrderStatus(OrderStatus.CANCELLED);
             orderRepository.save(order);
