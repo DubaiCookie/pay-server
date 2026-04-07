@@ -29,26 +29,26 @@ spec:
             - name: config-volume
               mountPath: /app/config    # Spring Boot가 여기서 application.properties 읽음
           env:
-            - name: spring.datasource.password
+            - name: SPRING_DATASOURCE_PASSWORD
               valueFrom:
                 secretKeyRef:
                   name: pay-server-secret
-                  key: spring.datasource.password
-            - name: toss.payment.api.secret-key
+                  key: SPRING_DATASOURCE_PASSWORD
+            - name: TOSS_PAYMENT_API_SECRET_KEY
               valueFrom:
                 secretKeyRef:
                   name: pay-server-secret
-                  key: toss.payment.api.secret-key
-            - name: toss.payment.api.client-key
+                  key: TOSS_PAYMENT_API_SECRET_KEY
+            - name: TOSS_PAYMENT_API_CLIENT_KEY
               valueFrom:
                 secretKeyRef:
                   name: pay-server-secret
-                  key: toss.payment.api.client-key
-            - name: jwt.secret
+                  key: TOSS_PAYMENT_API_CLIENT_KEY
+            - name: JWT_SECRET
               valueFrom:
                 secretKeyRef:
                   name: pay-server-secret
-                  key: jwt.secret
+                  key: JWT_SECRET
       volumes:
         - name: config-volume
           configMap:
