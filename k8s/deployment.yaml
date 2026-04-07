@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pay-server
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: pay-server
+  template:
+    metadata:
+      labels:
+        app: pay-server
+    spec:
+      containers:
+        - name: pay-server
+          image: amdp-registry.skala-ai.com/skala26a-cloud/team3-pay-server:latest
+          ports:
+            - containerPort: 8078
+          resources:
+            requests:
+              cpu: "250m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"
+          volumeMounts:
+            - name: config-volume
+              mountPath: /app/config    # Spring Boot가 여기서 application.properties 읽음
+          env:
+            - name: spring.datasource.password
+              valueFrom:
+                secretKeyRef:
+                  name: pay-server-secret
+                  key: spring.datasource.password
+            - name: toss.payment.api.secret-key
+              valueFrom:
+                secretKeyRef:
+                  name: pay-server-secret
+                  key: toss.payment.api.secret-key
+            - name: toss.payment.api.client-key
+              valueFrom:
+                secretKeyRef:
+                  name: pay-server-secret
+                  key: toss.payment.api.client-key
+            - name: jwt.secret
+              valueFrom:
+                secretKeyRef:
+                  name: pay-server-secret
+                  key: jwt.secret
+      volumes:
+        - name: config-volume
+          configMap:
+            name: pay-server-config
+            items:
+              - key: application.properties
+                path: application.properties  # /app/config/application.properties 로 마운트
